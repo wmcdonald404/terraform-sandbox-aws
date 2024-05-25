@@ -15,3 +15,15 @@ variable "private_subnet_cidrs" {
   description = "Private Subnet CIDR values"
   default     = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
 }
+
+variable "debian_ami" {
+  type        = string
+  description = "Debian 12 (HVM), SSD Volume Type"
+  default     = "ami-0eb11ab33f229b26c"
+}
+
+variable "base_instance_type" {
+  type        = string
+  description = "EC2 instance"
+  default     = "t2.micro"
+}

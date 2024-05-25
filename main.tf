@@ -39,6 +39,18 @@ resource "aws_route_table" "second_rt" {
     gateway_id = aws_internet_gateway.gw.id
   }
   tags = {
-    Name = "2nd Route Table"
+    Name = "second_rt"
+  }
+}
+
+resource "aws_instance" "ec2_instance" {
+# count = length(var.public_subnet_cidrs)
+  count = 3
+  ami = var.debian_ami
+  instance_type = var.base_instance_type
+  availability_zone = "eu-west-${count.index+1}"
+  
+  tags = {
+    Name = "server-${count.index+1}"
   }
 }

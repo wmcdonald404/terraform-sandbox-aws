@@ -9,7 +9,6 @@ Simple Terraform playground to create a VPC, associated resources and EC2 instan
 
 2. Initialise the Terraform configuration
     ```
-    wmcdonald@fedora:~$ tf init ~/re^C
     wmcdonald@fedora:~$ cd ~/repos/personal/terraform-sandbox/
     wmcdonald@fedora:~/repos/personal/terraform-sandbox$ tf init
 

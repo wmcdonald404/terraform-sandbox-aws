@@ -53,3 +53,23 @@ resource "aws_instance" "instances" {
     Name = "instance-${count.index}"
   }
 }
+
+# Create additional EBS volumes
+resource "aws_ebs_volume" "data_volumes" {
+  count             = 2
+  availability_zone = element(var.multi_azs, count.index % length(var.multi_azs))
+  size              = 5
+  type              = "gp3"
+  tags = {
+    Name = "data_volume_${count.index}"
+  }
+}
+
+# Attach additional EBS volumes to instances
+resource "aws_volume_attachment" "ebs_attachments" {
+  count        = length(var.multi_azs)
+  instance_id  = aws_instance.instances[count.index].id
+  volume_id    = aws_ebs_volume.data_volumes[count.index].id
+  device_name  = "/dev/xvdb"
+  depends_on = [aws_instance.instances]
+}

@@ -9,7 +9,7 @@ resource "aws_subnet" "public_subnets" {
   count = length(var.public_subnet_cidrs)
   vpc_id = aws_vpc.main.id
   cidr_block = element(var.public_subnet_cidrs, count.index)
-  availability_zone = element(var.azs, count.index)
+  availability_zone = element(var.all_azs, count.index)
   tags = {
     Name = "Public Subnet ${count.index + 1}"
   }
@@ -19,7 +19,7 @@ resource "aws_subnet" "private_subnets" {
   count = length(var.private_subnet_cidrs)
   vpc_id = aws_vpc.main.id
   cidr_block = element(var.private_subnet_cidrs, count.index)
-  availability_zone = element(var.azs, count.index)
+  availability_zone = element(var.all_azs, count.index)
   tags = {
     Name = "Private Subnet ${count.index + 1}"
   }
@@ -45,7 +45,7 @@ resource "aws_route_table" "second_rt" {
 
 # Put an instance in each subnet
 resource "aws_instance" "instances" {
-  count         = length(var.azs)
+  count         = length(var.multi_azs)
   ami           = var.debian_ami
   instance_type = var.base_instance_type
   subnet_id     = aws_subnet.private_subnets[count.index].id

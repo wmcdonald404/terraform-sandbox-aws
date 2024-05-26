@@ -4,10 +4,22 @@ variable "region" {
   default     = "eu-west-1"
 }
 
-variable "azs" {
+variable "all_azs" {
   type        = list(string)
-  description = "AWS Availability Zones"
+  description = "All AWS Availability Zones"
   default     = ["eu-west-1a", "eu-west-1b", "eu-west-1c"]
+}
+
+variable "single_az" {
+  type        = string
+  description = "Primary AWS Availability Zone"
+  default     = "eu-west-1a"
+}
+
+variable "multi_azs" {
+  type        = list(string)
+  description = "Multiple AWS Availability Zones"
+  default     = ["eu-west-1a", "eu-west-1b"]
 }
 
 variable "public_subnet_cidrs" {

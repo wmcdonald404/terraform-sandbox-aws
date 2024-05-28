@@ -1,3 +1,9 @@
+variable "suffix" {
+  type        = string
+  description = "Suffix string to append to resources"
+  default     = "multi"
+}
+
 variable "region" {
   type        = string
   description = "AWS Region"

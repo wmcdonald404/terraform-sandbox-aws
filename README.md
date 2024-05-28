@@ -1,9 +1,11 @@
 # terraform-sandbox
 Simple Terraform playground to create a VPC, associated resources and EC2 instances.
 
+```
 .terraform-sandbox
 ├── single_az # single-AZ, single public subnet, single ec2 instance, single EBS volume
 └── multi_az # multi-AZ, public & private subnets, multiple ec2 instances, multiple EBS volume
+```
 
 ## Prerequisites
 1. For testing purposes, we can use an AWS Access Key:

@@ -1,6 +1,10 @@
 # terraform-sandbox
 Simple Terraform playground to create a VPC, associated resources and EC2 instances.
 
+.terraform-sandbox
+├── single_az # single-AZ, single public subnet, single ec2 instance, single EBS volume
+└── multi_az # multi-AZ, public & private subnets, multiple ec2 instances, multiple EBS volume
+
 ## Prerequisites
 1. For testing purposes, we can use an AWS Access Key:
     ```
@@ -14,10 +18,10 @@ Simple Terraform playground to create a VPC, associated resources and EC2 instan
     wmcdonald@fedora:~$ git clone git@github.com:wmcdonald404/terraform-sandbox.git ~/repos/personal/terraform-sandbox/
     ```
 
-2. Initialise the Terraform configuration
+2. Initialise the Terraform configuration **for the single-AZ, single instance example**:
     ```
-    wmcdonald@fedora:~$ cd ~/repos/personal/terraform-sandbox/
-    wmcdonald@fedora:~/repos/personal/terraform-sandbox$ tf init
+    wmcdonald@fedora:~$ cd ~/repos/personal/terraform-sandbox/single_az
+    wmcdonald@fedora:single_az$ tf init
 
     Initializing the backend...
 
@@ -31,14 +35,14 @@ Simple Terraform playground to create a VPC, associated resources and EC2 instan
 
 3. Validate the Terraform configuration
     ```
-    wmcdonald@fedora:~/repos/personal/terraform-sandbox$ tf validate
+    wmcdonald@fedora:single_az$ tf validate
     Success! The configuration is valid.
     ```
 
 4. Review the Terraform plan
 
     ```
-    wmcdonald@fedora:~/repos/personal/terraform-sandbox$ terraform plan | grep -E -A1 'create|Plan'
+    wmcdonald@fedora:single_az$ terraform plan | grep -E -A1 'create|Plan'
     + create
 
     --
@@ -77,12 +81,12 @@ Simple Terraform playground to create a VPC, associated resources and EC2 instan
 
     List the existing VPCs before the Terraform apply:
     ```
-    wmcdonald@fedora:~/repos/personal/terraform-sandbox$ aws ec2 describe-vpcs --region eu-west-1 | jq '.Vpcs[] | {VpcId, Name: (if .Tags then (.Tags[] | select(.Key == "Name") | .Value) else "" end)}'
+    wmcdonald@fedora:single_az$ aws ec2 describe-vpcs --region eu-west-1 | jq '.Vpcs[] | {VpcId, Name: (if .Tags then (.Tags[] | select(.Key == "Name") | .Value) else "" end)}'
     ```
 
     Apply the Terraform:
     ```
-    wmcdonald@fedora:~/repos/personal/terraform-sandbox$ tf apply -auto-approve
+    wmcdonald@fedora:single_az$ tf apply -auto-approve
     Plan: 9 to add, 0 to change, 0 to destroy.
     aws_vpc.main: Creating...
     aws_vpc.main: Creation complete after 1s [id=vpc-0c766b517e58585c5]
@@ -108,7 +112,7 @@ Simple Terraform playground to create a VPC, associated resources and EC2 instan
 
     Compare the list of VPCs after Terraform apply:
     ```
-    wmcdonald@fedora:~/repos/personal/terraform-sandbox$ aws ec2 describe-vpcs --region eu-west-1 | jq '.Vpcs[] | {VpcId, Name: (if .Tags then (.Tags[] | select(.Key == "Name") | .Value) else "" end)}'
+    wmcdonald@fedora:single_az$ aws ec2 describe-vpcs --region eu-west-1 | jq '.Vpcs[] | {VpcId, Name: (if .Tags then (.Tags[] | select(.Key == "Name") | .Value) else "" end)}'
     {
     "VpcId": "vpc-0e195fd0ce5ab0432",
     "Name": "terraform-sandbox"
@@ -116,15 +120,56 @@ Simple Terraform playground to create a VPC, associated resources and EC2 instan
     ```
 6. Review the EC2 instances, their attached EBS volumes, and tags:
     ```
-    wmcdonald@fedora:~/repos/personal/terraform-sandbox$ aws ec2 describe-instances | jq -c '.Reservations[].Instances[] | [.InstanceId, .Placement, .BlockDeviceMappings, .Tags ]'
+    wmcdonald@fedora:single_az$ aws ec2 describe-instances | jq -c '.Reservations[].Instances[] | [.InstanceId, .Placement, .BlockDeviceMappings, .Tags ]'
     ["i-08f0fe7cc5ba2102c",{"AvailabilityZone":"eu-west-1a","GroupName":"","Tenancy":"default"},[{"DeviceName":"/dev/xvda","Ebs":{"AttachTime":"2024-05-27T12:18:07+00:00","DeleteOnTermination":true,"Status":"attached","VolumeId":"vol-06f04953f44fd05b6"}},{"DeviceName":"/dev/xvdb","Ebs":{"AttachTime":"2024-05-27T12:18:48+00:00","DeleteOnTermination":false,"Status":"attached","VolumeId":"vol-0388826a426157260"}}],[{"Key":"Name","Value":"instance-0"}]]
     ["i-0bba44e3da2690c49",{"AvailabilityZone":"eu-west-1b","GroupName":"","Tenancy":"default"},[{"DeviceName":"/dev/xvda","Ebs":{"AttachTime":"2024-05-27T12:18:07+00:00","DeleteOnTermination":true,"Status":"attached","VolumeId":"vol-064fc72778669a11a"}},{"DeviceName":"/dev/xvdb","Ebs":{"AttachTime":"2024-05-27T12:18:48+00:00","DeleteOnTermination":false,"Status":"attached","VolumeId":"vol-071c733a3bfc36e7e"}}],[{"Key":"Name","Value":"instance-1"}]]
+    ```
+
+## Testing access
+
+1. List active, running instances (output truncated)
+
+    ```
+    wmcdonald@fedora:~$ aws ec2 describe-instance-status 
+    {
+        "InstanceStatuses": [
+            {
+                "AvailabilityZone": "eu-west-1a",
+                "InstanceId": "i-07db34c7808ea3ffa",
+                "InstanceState": {
+                    "Code": 16,
+                    "Name": "running"
+                }
+            }
+        ]
+    }
+    ```
+
+2. List the public IP for the running instance
+    ```
+    wmcdonald@fedora:~$ aws ec2 describe-instances --instance-ids i-07db34c7808ea3ffa | jq -rc '.Reservations[].Instances[] | (.InstanceId, .PublicIpAddress)' | paste -d, - - 
+    i-07db34c7808ea3ffa,3.253.254.112
+    ```
+
+3. Connect to the instance
+**Note:** For Debian the default user will be 'admin', for Ubuntu 'ubuntu'.
+    ```
+    wmcdonald@fedora:~$ ssh -ladmin 3.253.254.112
+    Linux ip-10-0-1-175 6.1.0-13-cloud-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.55-1 (2023-09-29) x86_64
+
+    The programs included with the Debian GNU/Linux system are free software;
+    the exact distribution terms for each program are described in the
+    individual files in /usr/share/doc/*/copyright.
+
+    Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+    permitted by applicable law.
+    Last login: Tue May 28 14:37:23 2024 from 10.10.10.4
     ```
 
 ## Clean up
 1. Once done with the test infrastructure, remove the VPC and all its resources to ensure costs are contained:
     ```
-    wmcdonald@fedora:~/repos/personal/terraform-sandbox$ terraform apply -destroy -auto-approve
+    wmcdonald@fedora:single_az$ terraform apply -destroy -auto-approve
     aws_ebs_volume.data_volumes[0]: Refreshing state... [id=vol-0388826a426157260]
     aws_vpc.main: Refreshing state... [id=vpc-0e195fd0ce5ab0432]
     aws_ebs_volume.data_volumes[1]: Refreshing state... [id=vol-071c733a3bfc36e7e]
@@ -189,10 +234,10 @@ Simple Terraform playground to create a VPC, associated resources and EC2 instan
 
 2. Verify the VPC and instances are torn down:
     ```
-    wmcdonald@fedora:~/repos/personal/terraform-sandbox$ aws ec2 describe-instances | jq -c '.Reservations[].Instances[] | [.InstanceId, .State ]' 
+    wmcdonald@fedora:single_az$ aws ec2 describe-instances | jq -c '.Reservations[].Instances[] | [.InstanceId, .State ]' 
     ["i-08f0fe7cc5ba2102c",{"Code":48,"Name":"terminated"}]
     ["i-0bba44e3da2690c49",{"Code":48,"Name":"terminated"}]
-    wmcdonald@fedora:~/repos/personal/terraform-sandbox$ aws ec2 describe-vpcs 
+    wmcdonald@fedora:single_az$ aws ec2 describe-vpcs 
     {
         "Vpcs": []
     }
@@ -202,4 +247,5 @@ Simple Terraform playground to create a VPC, associated resources and EC2 instan
 
 ## References
 - [How to Build AWS VPC using Terraform – Step by Step](https://spacelift.io/blog/terraform-aws-vpc)
+- [Managing AWS Security Groups Through Terraform](https://spacelift.io/blog/terraform-security-group)
 - [.Multiple EC2 Instances using Terraform](https://gist.github.com/saissemet/7dead669cba388240cf67745cd535d40)

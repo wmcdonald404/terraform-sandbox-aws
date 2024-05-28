@@ -22,10 +22,18 @@ variable "public_subnet_cidrs" {
   default     = ["10.0.1.0/24"]
 }
 
+# https://wiki.debian.org/Cloud/AmazonEC2Image/Bookworm
 variable "debian_ami" {
   type        = string
   description = "Debian 12 (HVM), SSD Volume Type"
   default     = "ami-0eb11ab33f229b26c"
+}
+
+# https://aws.amazon.com/marketplace/pp/prodview-s4zvkzmlirbga?sr=0-7&ref_=beagle&applicationId=AWSMPContessa
+variable "ubuntu_ami" {
+  type        = string
+  description = "Ubuntu Server 24.04 LTS (HVM), SSD Volume Type"
+  default     = "ami-0776c814353b4814d"
 }
 
 variable "base_instance_type" {

@@ -39,7 +39,7 @@ resource "aws_subnet" "public_subnets" {
   }
 } 
 
-resource "aws_internet_gateway" "gw" {
+resource "aws_internet_gateway" "igw" {
   vpc_id  = aws_vpc.main.id
   tags    = {
     Name  = "igw-${var.suffix}"
@@ -50,12 +50,19 @@ resource "aws_route_table" "second_rt" {
   vpc_id = aws_vpc.main.id
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.gw.id
+    gateway_id = aws_internet_gateway.igw.id
   }
   tags = {
     Name = "rt-secondary-${var.suffix}"
   }
 }
+
+resource "aws_route_table_association" "public_subnet_second_rt" {
+  count = length(var.public_subnet_cidrs)
+  subnet_id      = element(aws_subnet.public_subnets[*].id, count.index)
+  route_table_id = aws_route_table.second_rt.id
+}
+
 
 # Put an instance in each subnet
 resource "aws_instance" "public_ssh" {
@@ -65,7 +72,7 @@ resource "aws_instance" "public_ssh" {
   instance_type = var.base_instance_type
   key_name      = "wmcdonald@gmail.com aws ed25519-key-20211205"
   subnet_id     = aws_subnet.public_subnets[count.index].id
-  vpc_security_group_ids = [aws_security_group.ssh_sg.id]
+  vpc_security_group_ids = [aws_security_group.sg_ssh.id]
   tags = {
     Name = "ssh-${count.index}"
     MachineRole = "ssh"

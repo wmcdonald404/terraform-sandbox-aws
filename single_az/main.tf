@@ -99,7 +99,7 @@ resource "aws_instance" "private_databases" {
 ##  backup volumes
 resource "aws_ebs_volume" "backup_volumes" {
   count             = length(aws_instance.private_databases)
-  availability_zone = element(var.multi_azs, count.index % length(var.multi_azs))
+  availability_zone = var.multi_azs[count.index]
   size              = 10
   type              = "gp3"
   tags = {
@@ -110,7 +110,7 @@ resource "aws_ebs_volume" "backup_volumes" {
 }
 
 resource "aws_volume_attachment" "backup_volumes_attachments" {
-  count        = length(var.multi_azs)
+  count        = length(aws_instance.private_databases)
   instance_id  = aws_instance.private_databases[count.index].id
   volume_id    = aws_ebs_volume.backup_volumes[count.index].id
   device_name  = "/dev/xvdb"

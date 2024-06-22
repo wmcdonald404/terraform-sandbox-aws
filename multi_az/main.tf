@@ -67,7 +67,7 @@ resource "aws_route_table" "second_rt" {
   }
 }
 
-# Put an instance in each subnet
+# Put an instance in the "primary" subnet
 resource "aws_instance" "public_ssh" {
   ami           = var.debian_ami
   associate_public_ip_address = "true"
@@ -77,12 +77,12 @@ resource "aws_instance" "public_ssh" {
   subnet_id     = aws_subnet.public_subnets[count.index].id
   vpc_security_group_ids = [aws_security_group.ssh_sg.id]
   tags = {
-    Name = "ssh-${count.index}"
-    MachineRole = "ssh"
+    InstanceName = "ssh-${count.index}"
+    InstanceRole = "ssh"
   }
 }
 
-# Put an instance in each subnet
+# Put a database instance in each subnet
 resource "aws_instance" "private_databases" {
   ami           = var.debian_ami
   count         = length(var.multi_azs)
@@ -90,27 +90,92 @@ resource "aws_instance" "private_databases" {
   key_name      = "wmcdonald@gmail.com aws ed25519-key-20211205"
   subnet_id     = aws_subnet.private_subnets[count.index].id
   tags = {
-    Name = "database-${count.index}"
-    MachineRole = "database"
+    InstanceName = "sql-database-${count.index}"
+    InstanceRole = "sql-database"
   }
 }
 
-# Create additional EBS volumes
+# Create and attach additional EBS volumes
+##  backup volume
+resource "aws_ebs_volume" "backup_volumes" {
+  count             = 2
+  availability_zone = element(var.multi_azs, count.index % length(var.multi_azs))
+  size              = 10
+  type              = "gp3"
+  tags = {
+    InstanceName    = "sql-database-${count.index}"
+    VolumeName      = "backup-volume-${count.index}"
+    VolumePurpose   = "backup-volume"
+  }
+}
+
+resource "aws_volume_attachment" "backup_volumes_attachments" {
+  count        = length(var.multi_azs)
+  instance_id  = aws_instance.private_databases[count.index].id
+  volume_id    = aws_ebs_volume.backup_volumes[count.index].id
+  device_name  = "/dev/xvdb"
+  depends_on   = [aws_instance.private_databases]
+}
+
+## Additional data volume
 resource "aws_ebs_volume" "data_volumes" {
   count             = 2
   availability_zone = element(var.multi_azs, count.index % length(var.multi_azs))
-  size              = 5
+  size              = 2
   type              = "gp3"
   tags = {
-    Name = "data_volume_${count.index}"
+    InstanceName    = "sql-database-${count.index}"
+    VolumeName      = "data-volume-${count.index}"
+    VolumePurpose   = "data-volume"
   }
 }
 
-# Attach additional EBS volumes to instances
-resource "aws_volume_attachment" "ebs_attachments" {
+resource "aws_volume_attachment" "data_volumes_attachments" {
   count        = length(var.multi_azs)
   instance_id  = aws_instance.private_databases[count.index].id
   volume_id    = aws_ebs_volume.data_volumes[count.index].id
-  device_name  = "/dev/xvdb"
+  device_name  = "/dev/xvdc"
+  depends_on   = [aws_instance.private_databases]
+}
+
+## Additional log volume
+resource "aws_ebs_volume" "log_volumes" {
+  count             = 2
+  availability_zone = element(var.multi_azs, count.index % length(var.multi_azs))
+  size              = 2
+  type              = "gp3"
+  tags = {
+    InstanceName    = "sql-database-${count.index}"
+    VolumeName      = "log-volume-${count.index}"
+    VolumePurpose   = "log-volume"
+  }
+}
+
+resource "aws_volume_attachment" "log_volumes_attachments" {
+  count        = length(var.multi_azs)
+  instance_id  = aws_instance.private_databases[count.index].id
+  volume_id    = aws_ebs_volume.log_volumes[count.index].id
+  device_name  = "/dev/xvdd"
+  depends_on   = [aws_instance.private_databases]
+}
+
+## Additional tempdb volume
+resource "aws_ebs_volume" "tempdb_volumes" {
+  count             = 2
+  availability_zone = element(var.multi_azs, count.index % length(var.multi_azs))
+  size              = 2
+  type              = "gp3"
+  tags = {
+    InstanceName    = "sql-database-${count.index}"
+    VolumeName      = "tempdb-volume-${count.index}"
+    VolumePurpose   = "tempdb-volume"
+  }
+}
+
+resource "aws_volume_attachment" "tempdb_volumes_attachments" {
+  count        = length(var.multi_azs)
+  instance_id  = aws_instance.private_databases[count.index].id
+  volume_id    = aws_ebs_volume.tempdb_volumes[count.index].id
+  device_name  = "/dev/xvde"
   depends_on   = [aws_instance.private_databases]
 }

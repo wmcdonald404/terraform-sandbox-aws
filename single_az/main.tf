@@ -95,29 +95,29 @@ resource "aws_instance" "private_databases" {
   }
 }
 
-# # Create and attach additional EBS volumes
-# ##  backup volume
-# resource "aws_ebs_volume" "backup_volumes" {
-#   count             = 2
-#   availability_zone = element(var.multi_azs, count.index % length(var.multi_azs))
-#   size              = 10
-#   type              = "gp3"
-#   tags = {
-#     InstanceName    = "sql-database-${count.index}"
-#     VolumeName      = "backup-volume-${count.index}"
-#     VolumePurpose   = "backup-volume"
-#   }
-# }
+# Create and attach additional EBS volumes
+##  backup volumes
+resource "aws_ebs_volume" "backup_volumes" {
+  count             = length(aws_instance.private_databases)
+  availability_zone = element(var.multi_azs, count.index % length(var.multi_azs))
+  size              = 10
+  type              = "gp3"
+  tags = {
+    InstanceName    = "sql-database-${count.index}"
+    VolumeName      = "backup-volume-${count.index}"
+    VolumePurpose   = "backup-volume"
+  }
+}
 
-# resource "aws_volume_attachment" "backup_volumes_attachments" {
-#   count        = length(var.multi_azs)
-#   instance_id  = aws_instance.private_databases[count.index].id
-#   volume_id    = aws_ebs_volume.backup_volumes[count.index].id
-#   device_name  = "/dev/xvdb"
-#   depends_on   = [aws_instance.private_databases]
-# }
+resource "aws_volume_attachment" "backup_volumes_attachments" {
+  count        = length(var.multi_azs)
+  instance_id  = aws_instance.private_databases[count.index].id
+  volume_id    = aws_ebs_volume.backup_volumes[count.index].id
+  device_name  = "/dev/xvdb"
+  depends_on   = [aws_instance.private_databases]
+}
 
-# ## Additional data volume
+# ## data volumes
 # resource "aws_ebs_volume" "data_volumes" {
 #   count             = 2
 #   availability_zone = element(var.multi_azs, count.index % length(var.multi_azs))
@@ -138,7 +138,7 @@ resource "aws_instance" "private_databases" {
 #   depends_on   = [aws_instance.private_databases]
 # }
 
-# ## Additional log volume
+# ## log volumes
 # resource "aws_ebs_volume" "log_volumes" {
 #   count             = 2
 #   availability_zone = element(var.multi_azs, count.index % length(var.multi_azs))
@@ -159,7 +159,7 @@ resource "aws_instance" "private_databases" {
 #   depends_on   = [aws_instance.private_databases]
 # }
 
-# ## Additional tempdb volume
+# ## tempdb volumes
 # resource "aws_ebs_volume" "tempdb_volumes" {
 #   count             = 2
 #   availability_zone = element(var.multi_azs, count.index % length(var.multi_azs))

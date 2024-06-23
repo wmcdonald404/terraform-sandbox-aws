@@ -77,6 +77,7 @@ resource "aws_instance" "public_bastions" {
   subnet_id     = aws_subnet.public_subnets[count.index].id
   vpc_security_group_ids = [aws_security_group.ssh_sg.id]
   tags = {
+    Name         = "bastion-${count.index}"
     InstanceName = "bastion-${count.index}"
     InstanceRole = "bastion"
   }
@@ -111,6 +112,7 @@ resource "aws_volume_attachment" "public_bastions_user_volumes_attachments" {
 #   key_name       = "wmcdonald@gmail.com aws ed25519-key-20211205"
 #   subnet_id      = aws_subnet.private_subnets[count.index].id
 #   tags = {
+#     Name         = "sql-database-${count.index}"
 #     InstanceName = "sql-database-${count.index}"
 #     InstanceRole = "sql-database"
 #   }

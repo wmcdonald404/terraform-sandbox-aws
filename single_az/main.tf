@@ -52,20 +52,26 @@ resource "aws_subnet" "private_subnets" {
 resource "aws_internet_gateway" "gw" {
   vpc_id  = aws_vpc.main.id
   tags    = {
-    Name  = "Project VPC IG"
+    Name  = "Internet Gateway"
   }
 }
 
-resource "aws_route_table" "second_rt" {
-  vpc_id = aws_vpc.main.id
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.gw.id
-  }
-  tags = {
-    Name = "second_rt"
-  }
+resource "aws_route" "bastion_gateway_route" {
+  route_table_id = aws_vpc.main.default_route_table_id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id = aws_internet_gateway.gw.id
 }
+
+# resource "aws_route_table" "second_rt" {
+#   vpc_id = aws_vpc.main.id
+#   route {
+#     cidr_block = "0.0.0.0/0"
+#     gateway_id = aws_internet_gateway.gw.id
+#   }
+#   tags = {
+#     Name = "second_rt"
+#   }
+# }
 
 # Put an instance in the "primary" subnet
 resource "aws_instance" "public_bastions" {

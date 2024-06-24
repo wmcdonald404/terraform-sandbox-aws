@@ -35,13 +35,15 @@ Simple Terraform playground to create a VPC, associated resources and EC2 instan
     Terraform has been successfully initialized!
     ```
 
-3. Validate the Terraform configuration
+3. Update the [`key_name`](https://github.com/wmcdonald404/terraform-sandbox/blob/6a813e5436e209c873a6b5a62d672c2a74a534a6/single_az/main.tf#L82) on line 82 to use a named keypair on your local system.
+
+4. Validate the Terraform configuration
     ```
     wmcdonald@fedora:single_az$ tf validate
     Success! The configuration is valid.
     ```
 
-4. Review the Terraform plan
+5. Review the Terraform plan
 
     ```
     wmcdonald@fedora:single_az$ terraform plan | grep -E -A1 'create|Plan'
@@ -79,7 +81,7 @@ Simple Terraform playground to create a VPC, associated resources and EC2 instan
 
     ```
 
-5. Apply the Terraform configuration
+6. Apply the Terraform configuration
 
     List the existing VPCs before the Terraform apply:
     ```
@@ -120,7 +122,8 @@ Simple Terraform playground to create a VPC, associated resources and EC2 instan
     "Name": "terraform-sandbox"
     }
     ```
-6. Review the EC2 instances, their attached EBS volumes, and tags:
+
+7. Review the EC2 instances, their attached EBS volumes, and tags:
     ```
     wmcdonald@fedora:single_az$ aws ec2 describe-instances | jq -c '.Reservations[].Instances[] | [.InstanceId, .Placement, .BlockDeviceMappings, .Tags ]'
     ["i-08f0fe7cc5ba2102c",{"AvailabilityZone":"eu-west-1a","GroupName":"","Tenancy":"default"},[{"DeviceName":"/dev/xvda","Ebs":{"AttachTime":"2024-05-27T12:18:07+00:00","DeleteOnTermination":true,"Status":"attached","VolumeId":"vol-06f04953f44fd05b6"}},{"DeviceName":"/dev/xvdb","Ebs":{"AttachTime":"2024-05-27T12:18:48+00:00","DeleteOnTermination":false,"Status":"attached","VolumeId":"vol-0388826a426157260"}}],[{"Key":"Name","Value":"instance-0"}]]
@@ -154,7 +157,9 @@ Simple Terraform playground to create a VPC, associated resources and EC2 instan
     ```
 
 3. Connect to the instance
+
 **Note:** For Debian the default user will be 'admin', for Ubuntu 'ubuntu'.
+
     ```
     wmcdonald@fedora:~$ ssh -ladmin 3.253.254.112
     Linux ip-10-0-1-175 6.1.0-13-cloud-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.55-1 (2023-09-29) x86_64

@@ -62,17 +62,6 @@ resource "aws_route" "bastion_gateway_route" {
   gateway_id = aws_internet_gateway.gw.id
 }
 
-# resource "aws_route_table" "second_rt" {
-#   vpc_id = aws_vpc.main.id
-#   route {
-#     cidr_block = "0.0.0.0/0"
-#     gateway_id = aws_internet_gateway.gw.id
-#   }
-#   tags = {
-#     Name = "second_rt"
-#   }
-# }
-
 # Put an instance in the "primary" subnet
 resource "aws_instance" "public_bastions" {
   ami           = var.debian_ami

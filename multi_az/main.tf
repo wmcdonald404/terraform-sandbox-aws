@@ -52,54 +52,72 @@ resource "aws_subnet" "private_subnets" {
 resource "aws_internet_gateway" "gw" {
   vpc_id  = aws_vpc.main.id
   tags    = {
-    Name  = "Project VPC IG"
+    Name  = "Internet Gateway"
   }
 }
 
-resource "aws_route_table" "second_rt" {
-  vpc_id = aws_vpc.main.id
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.gw.id
-  }
-  tags = {
-    Name = "second_rt"
-  }
+resource "aws_route" "bastion_gateway_route" {
+  route_table_id = aws_vpc.main.default_route_table_id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id = aws_internet_gateway.gw.id
 }
 
-# Put an instance in the "primary" subnet
-resource "aws_instance" "public_ssh" {
+# Put a bastion instance in the "primary" subnet
+resource "aws_instance" "public_bastions" {
   ami           = var.debian_ami
   associate_public_ip_address = "true"
-  count = 1
+  count         = 1
   instance_type = var.base_instance_type
   key_name      = "wmcdonald@gmail.com aws ed25519-key-20211205"
   subnet_id     = aws_subnet.public_subnets[count.index].id
   vpc_security_group_ids = [aws_security_group.ssh_sg.id]
   tags = {
-    InstanceName = "ssh-${count.index}"
-    InstanceRole = "ssh"
+    Name         = "bastion-${count.index}"
+    InstanceName = "bastion-${count.index}"
+    InstanceRole = "bastion"
   }
+}
+
+##  user volume
+resource "aws_ebs_volume" "public_bastions_user_volumes" {
+  count             = length(aws_instance.public_bastions)
+  availability_zone = var.multi_azs[count.index]
+  size              = 10
+  type              = "gp3"
+  tags = {
+    InstanceName    = "bastion-${count.index}"
+    VolumeName      = "user-volume-${count.index}"
+    VolumePurpose   = "user-volume"
+  }
+}
+
+resource "aws_volume_attachment" "public_bastions_user_volumes_attachments" {
+  count        = length(aws_instance.public_bastions)
+  instance_id  = aws_instance.public_bastions[count.index].id
+  volume_id    = aws_ebs_volume.public_bastions_user_volumes[count.index].id
+  device_name  = "/dev/xvdb"
+  depends_on   = [aws_instance.public_bastions]
 }
 
 # Put a database instance in each subnet
 resource "aws_instance" "private_databases" {
-  ami           = var.debian_ami
-  count         = length(var.multi_azs)
-  instance_type = var.base_instance_type
-  key_name      = "wmcdonald@gmail.com aws ed25519-key-20211205"
-  subnet_id     = aws_subnet.private_subnets[count.index].id
+  ami            = var.debian_ami
+  count          = 2
+  instance_type  = var.base_instance_type
+  key_name       = "wmcdonald@gmail.com aws ed25519-key-20211205"
+  subnet_id      = aws_subnet.private_subnets[count.index].id
   tags = {
+    Name         = "sql-database-${count.index}"
     InstanceName = "sql-database-${count.index}"
     InstanceRole = "sql-database"
   }
 }
 
 # Create and attach additional EBS volumes
-##  backup volume
-resource "aws_ebs_volume" "backup_volumes" {
-  count             = 2
-  availability_zone = element(var.multi_azs, count.index % length(var.multi_azs))
+##  backup volumes
+resource "aws_ebs_volume" "private_databases_backup_volumes" {
+  count             = length(aws_instance.private_databases)
+  availability_zone = var.multi_azs[count.index]
   size              = 10
   type              = "gp3"
   tags = {
@@ -109,18 +127,18 @@ resource "aws_ebs_volume" "backup_volumes" {
   }
 }
 
-resource "aws_volume_attachment" "backup_volumes_attachments" {
-  count        = length(var.multi_azs)
+resource "aws_volume_attachment" "private_databases_backup_volumes_attachments" {
+  count        = length(aws_instance.private_databases)
   instance_id  = aws_instance.private_databases[count.index].id
-  volume_id    = aws_ebs_volume.backup_volumes[count.index].id
+  volume_id    = aws_ebs_volume.private_databases_backup_volumes[count.index].id
   device_name  = "/dev/xvdb"
   depends_on   = [aws_instance.private_databases]
 }
 
-## Additional data volume
-resource "aws_ebs_volume" "data_volumes" {
-  count             = 2
-  availability_zone = element(var.multi_azs, count.index % length(var.multi_azs))
+##  data volumes
+resource "aws_ebs_volume" "private_databases_data_volumes" {
+  count             = length(aws_instance.private_databases)
+  availability_zone = var.multi_azs[count.index]
   size              = 2
   type              = "gp3"
   tags = {
@@ -130,18 +148,18 @@ resource "aws_ebs_volume" "data_volumes" {
   }
 }
 
-resource "aws_volume_attachment" "data_volumes_attachments" {
-  count        = length(var.multi_azs)
+resource "aws_volume_attachment" "private_databases_data_volumes_attachments" {
+  count        = length(aws_instance.private_databases)
   instance_id  = aws_instance.private_databases[count.index].id
-  volume_id    = aws_ebs_volume.data_volumes[count.index].id
+  volume_id    = aws_ebs_volume.private_databases_data_volumes[count.index].id
   device_name  = "/dev/xvdc"
   depends_on   = [aws_instance.private_databases]
 }
 
-## Additional log volume
-resource "aws_ebs_volume" "log_volumes" {
-  count             = 2
-  availability_zone = element(var.multi_azs, count.index % length(var.multi_azs))
+##  log volumes
+resource "aws_ebs_volume" "private_databases_log_volumes" {
+  count             = length(aws_instance.private_databases)
+  availability_zone = var.multi_azs[count.index]
   size              = 2
   type              = "gp3"
   tags = {
@@ -151,18 +169,18 @@ resource "aws_ebs_volume" "log_volumes" {
   }
 }
 
-resource "aws_volume_attachment" "log_volumes_attachments" {
-  count        = length(var.multi_azs)
+resource "aws_volume_attachment" "private_databases_log_volumes_attachments" {
+  count        = length(aws_instance.private_databases)
   instance_id  = aws_instance.private_databases[count.index].id
-  volume_id    = aws_ebs_volume.log_volumes[count.index].id
+  volume_id    = aws_ebs_volume.private_databases_log_volumes[count.index].id
   device_name  = "/dev/xvdd"
   depends_on   = [aws_instance.private_databases]
 }
 
-## Additional tempdb volume
-resource "aws_ebs_volume" "tempdb_volumes" {
-  count             = 2
-  availability_zone = element(var.multi_azs, count.index % length(var.multi_azs))
+##  tempdb volumes
+resource "aws_ebs_volume" "private_databases_tempdb_volumes" {
+  count             = length(aws_instance.private_databases)
+  availability_zone = var.multi_azs[count.index]
   size              = 2
   type              = "gp3"
   tags = {
@@ -172,10 +190,10 @@ resource "aws_ebs_volume" "tempdb_volumes" {
   }
 }
 
-resource "aws_volume_attachment" "tempdb_volumes_attachments" {
-  count        = length(var.multi_azs)
+resource "aws_volume_attachment" "private_databases_tempdb_volumes_attachments" {
+  count        = length(aws_instance.private_databases)
   instance_id  = aws_instance.private_databases[count.index].id
-  volume_id    = aws_ebs_volume.tempdb_volumes[count.index].id
+  volume_id    = aws_ebs_volume.private_databases_tempdb_volumes[count.index].id
   device_name  = "/dev/xvde"
   depends_on   = [aws_instance.private_databases]
 }

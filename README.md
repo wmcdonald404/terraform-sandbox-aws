@@ -8,7 +8,9 @@ Simple Terraform playground to create a VPC, associated resources and EC2 instan
 ```
 
 ## Prerequisites
-1. For testing purposes, we can use an AWS Access Key:
+1. It's assumed you have Terraform installed. Install via [the package instuctions.](https://developer.hashicorp.com/terraform/install)
+
+2. For testing purposes, we can use an AWS Access Key:
     ```
     wmcdonald@fedora:~$ export AWS_ACCESS_KEY_ID=<ACCESS KEY ID>
     wmcdonald@fedora:~$ export AWS_SECRET_ACCESS_KEY=<SECRET ACCESS KEY>

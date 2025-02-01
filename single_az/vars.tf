@@ -1,7 +1,7 @@
 variable "suffix" {
   type        = string
   description = "Suffix string to append to resources"
-  default     = "multi"
+  default     = "single"
 }
 
 variable "region" {

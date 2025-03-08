@@ -1,5 +1,4 @@
 # terraform-sandbox - single_az
-
 The single_az code creates all the resources needed to deploy a simple publically accessible EC2 instance. 
 
 - The instance is created with a small root volume. 
@@ -8,8 +7,6 @@ The single_az code creates all the resources needed to deploy a simple publicall
 The root volume is very samll which is fine for throwaway demonstration instance. It's useful to understand how to update the infrastructure-as-code definition to resize the device and then resize the filesystem.
 
 The user volume isn't currently automatically formatted and mounted but this would be simple to add using cloud init user data or a similar mechanism. In order to understand how disk sizing and changes work, we can format, label and mount the second block device, change it and observe the corresponding in-instance behaviour.
-
-
 
 ## Growing the root volume online
 Growing an AWS EBS volume with Terraform is fairly simple. If no `root_block_device` configuration is included for the `aws_instance` definition in the Terraform HCL, the default size for ami-0eb11ab33f229b26c is 8GB. 
@@ -28,6 +25,7 @@ resource "aws_instance" "public_bastions" {
 
 1. Increase the root volume size:
 
+    ```
     resource "aws_instance" "public_bastions" {
     ...
     root_block_device {
@@ -100,7 +98,6 @@ resource "aws_instance" "public_bastions" {
     ```
 
 ## Formatting, labelling and mounting the user volume
-
 1. Connect to the new instance
 
 2. List the disks

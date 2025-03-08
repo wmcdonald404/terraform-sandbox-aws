@@ -4,7 +4,7 @@ The single_az code creates all the resources needed to deploy a simple publicall
 
 In order to understand how disk sizing and changes work, we can format, label and mount the second block device, change it and observe the corresponding in-instance behaviour.
 
-## Formatting, labelling and mounting the initial disk
+## Formatting, labelling and mounting the user volume
 
 1. Connect to the new instance
 
@@ -75,7 +75,8 @@ In order to understand how disk sizing and changes work, we can format, label an
     /dev/xvdb       9.8G   24K  9.3G   1% /data
     ```
 
-7. Create some persistent state before resizing
+## Resizing the user volume with a reboot
+1. Create some persistent state before resizing
 
     ```
     root@ip-10-0-1-73:~# echo "Persistent state test" > /data/state
@@ -85,7 +86,7 @@ In order to understand how disk sizing and changes work, we can format, label an
     Persistent state test
     ```
 
-8. Resize the extra use volume, update ~./single_az/main.tf`:
+2. Resize the extra use volume, update ~./single_az/main.tf`:
 
     ```
     ##  user volume
@@ -102,13 +103,13 @@ In order to understand how disk sizing and changes work, we can format, label an
     }
     ```
 
-9. Apply the updated infrastructure-as-code:
+3. Apply the updated infrastructure-as-code:
 
     ```
     wmcdonald@fedora single_az ±|main ✗|→ terraform apply -auto-approve
     ```
 
-10. Review the block device state from inside the EC2 instance
+4. Review the block device state from inside the EC2 instance
 
     ```
     root@ip-10-0-1-73:~# fdisk -l | grep '^Disk /dev'
@@ -120,7 +121,7 @@ In order to understand how disk sizing and changes work, we can format, label an
     /dev/xvdb       9.8G   28K  9.3G   1% /data
     ```
 
-11. The block device resize is reflected inside the instance without restart, the filesystem is still pre-resize (this is expected). 
+5. The block device resize is reflected inside the instance without restart, the filesystem is still pre-resize (this is expected). 
 
     If we reboot the system, `x-systemd.growfs` will detect the delta between filesystem and block device and grow the filesystem accordingly:
 
@@ -138,9 +139,97 @@ In order to understand how disk sizing and changes work, we can format, label an
 
     We could achieve the same result without a restart with `resize2fs`.
     
-12. Validate that the persistent state we created is still present:
+6. Validate that the persistent state we created is still present:
 
     ```
     root@ip-10-0-1-73:~# cat /data/state 
     Persistent state test
+    ```
+
+## Growing the root volume online
+Growing an AWS EBS volume with Terraform is fairly simple. If no `root_block_device` configuration is included for the `aws_instance` definition in the Terraform HCL, the default size for ami-0eb11ab33f229b26c is 8GB. 
+
+This is equivalent to:
+
+```
+resource "aws_instance" "public_bastions" {
+    ...
+    root_block_device {
+        volume_size = 8
+    }
+    ...
+}
+```
+
+1. Increase the root volume size:
+
+    resource "aws_instance" "public_bastions" {
+    ...
+    root_block_device {
+        volume_size = 16
+    }
+    ...
+    }
+    ```
+
+2. Run `terraform plan` / `terraform apply`
+
+    ```
+    wmcdonald@fedora single_az ±|main ✗|→ terraform apply -auto-approve
+    aws_vpc.main: Refreshing state... [id=vpc-0367eff39661a89dd]
+
+    Terraform will perform the following actions:
+
+    # aws_instance.public_bastions[0] will be updated in-place
+    ~ resource "aws_instance" "public_bastions" {
+            id                 = "i-0c3bd43a8c917d0d9"
+            tags                                 = {
+                "InstanceName" = "bastion-0"
+                "InstanceRole" = "bastion"
+                "Name"         = "bastion-0"
+            }
+            # (39 unchanged attributes hidden)
+
+        ~ root_block_device {
+                tags            = {}
+            ~ volume_size       = 8 -> 16
+                # (9 unchanged attributes hidden)
+            }
+
+            # (8 unchanged blocks hidden)
+        }
+
+    Plan: 0 to add, 1 to change, 0 to destroy.
+    aws_instance.public_bastions[0]: Modifications complete after 32s [id=i-0c3bd43a8c917d0d9]
+
+    Apply complete! Resources: 0 added, 1 changed, 0 destroyed.
+    ```
+
+3. Resize the partition the root filesystem (`/`) is placed on
+
+    ```
+    root@ip-10-0-1-26:~# df -h /
+    Filesystem      Size  Used Avail Use% Mounted on
+    /dev/xvda1      7.7G  837M  6.5G  12% /
+
+    root@ip-10-0-1-26:~# growpart /dev/xvda 1
+    CHANGED: partition=1 start=262144 old: size=16513024 end=16775167 new: size=33292255 end=33554398
+    ```
+
+4. Resize the root filesystem
+
+    ```
+    root@ip-10-0-1-26:~# resize2fs /dev/xvda1
+    resize2fs 1.47.0 (5-Feb-2023)
+    Filesystem at /dev/xvda1 is mounted on /; on-line resizing required
+    old_desc_blocks = 1, new_desc_blocks = 2
+    The filesystem on /dev/xvda1 is now 4161531 (4k) blocks long.
+    ```
+
+5. Check that the filesystem has grown
+
+    ```
+    root@ip-10-0-1-26:~# df -h /
+    Filesystem      Size  Used Avail Use% Mounted on
+    /dev/xvda1       16G  837M   14G   6% /
     ```

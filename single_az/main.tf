@@ -70,6 +70,9 @@ resource "aws_instance" "public_bastions" {
   instance_type = var.base_instance_type
   key_name      = "wmcdonald@gmail.com aws ed25519-key-20211205"
   subnet_id     = aws_subnet.public_subnets[count.index].id
+  root_block_device {
+    volume_size = 8
+  }
   vpc_security_group_ids = [aws_security_group.ssh_sg.id]
   tags = {
     Name         = "bastion-${count.index}"

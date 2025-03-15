@@ -29,6 +29,20 @@ variable "base_instance_type" {
   default     = "t3.micro"
 }
 
+variable "debian_user_data" {
+  type = string
+  description = "UserData to install SSM agent when distro is Debian"
+  default = <<-EOF
+  #!/bin/bash
+  if [ -f "/etc/debian_version" ]
+  then
+      mkdir /tmp/ssm
+      wget -O /tmp/ssm/amazon-ssm-agent.deb https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_amd64/amazon-ssm-agent.deb 
+      sudo dpkg -i /tmp/ssm/amazon-ssm-agent.deb
+  fi
+  EOF
+}
+
 variable "multi_azs" {
   type        = list(string)
   description = "Multiple AWS Availability Zones"

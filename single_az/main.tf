@@ -74,6 +74,7 @@ resource "aws_instance" "public_bastions" {
   root_block_device {
     volume_size = 8
   }
+  user_data = var.ami == "debian12" ? var.debian_user_data : ""
   vpc_security_group_ids = [aws_security_group.ssh_sg.id]
   tags = {
     Name         = "bastion-${count.index}"

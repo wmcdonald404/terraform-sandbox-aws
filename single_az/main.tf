@@ -64,12 +64,13 @@ resource "aws_route" "bastion_gateway_route" {
 
 # Put an instance in the "primary" subnet
 resource "aws_instance" "public_bastions" {
-  ami           = var.debian_ami
+  ami                   = var.amis[var.ami]
   associate_public_ip_address = "true"
-  count         = 1
-  instance_type = var.base_instance_type
-  key_name      = "wmcdonald@gmail.com aws ed25519-key-20211205"
-  subnet_id     = aws_subnet.public_subnets[count.index].id
+  count                 = 1
+  instance_type         = var.base_instance_type
+  key_name              = "wmcdonald@gmail.com aws ed25519-key-20211205"
+  subnet_id             = aws_subnet.public_subnets[count.index].id
+  iam_instance_profile  = "AmazonSSMRoleForInstancesQuickSetup"
   root_block_device {
     volume_size = 8
   }
@@ -101,4 +102,3 @@ resource "aws_volume_attachment" "public_bastions_user_volumes_attachments" {
   device_name  = "/dev/xvdb"
   depends_on   = [aws_instance.public_bastions]
 }
-

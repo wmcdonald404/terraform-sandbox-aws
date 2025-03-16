@@ -67,20 +67,20 @@ resource "aws_instance" "public_bastions" {
   ami                         = var.amis[var.ami]
   associate_public_ip_address = "true"
   count                       = 1
+  iam_instance_profile        = "AmazonSSMRoleForInstancesQuickSetup"
   instance_type               = var.base_instance_type
   key_name                    = var.keypair
-  subnet_id                   = aws_subnet.public_subnets[count.index].id
-  iam_instance_profile        = "AmazonSSMRoleForInstancesQuickSetup"
   root_block_device {
     volume_size               = 8
   }
-  user_data                   = var.ami == "debian12" ? var.debian_user_data : ""
-  vpc_security_group_ids      = [aws_security_group.ssh_sg.id]
+  subnet_id                   = aws_subnet.public_subnets[count.index].id
   tags = {
     Name         = "bastion-${count.index}"
     InstanceName = "bastion-${count.index}"
     InstanceRole = "bastion"
   }
+  user_data                   = var.ami == "debian12" ? var.debian_user_data : ""
+  vpc_security_group_ids      = [aws_security_group.ssh_sg.id]
 }
 
 #  user volume

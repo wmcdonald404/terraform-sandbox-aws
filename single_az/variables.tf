@@ -25,7 +25,7 @@ variable "ami" {
 # for a nice map option to set small/medium/large options.
 variable "base_instance_type" {
   type        = string
-  description = "EC2 instance"
+  description = "EC2 instance type"
   default     = "t3.micro"
 }
 
@@ -43,6 +43,12 @@ variable "debian_user_data" {
   EOF
 }
 
+variable "keypair" {
+  type        = string
+  description = "Keypair name"
+  default     = ""
+}
+
 variable "multi_azs" {
   type        = list(string)
   description = "Multiple AWS Availability Zones"
@@ -53,6 +59,12 @@ variable "private_subnet_cidrs" {
   type        = list(string)
   description = "Private Subnet CIDR values"
   default     = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
+}
+
+variable "projectid" {
+  type        = string
+  description = "Project identifier/name"
+  default     = "tf-sandbox-aws"
 }
 
 variable "public_subnet_cidrs" {
@@ -75,5 +87,11 @@ variable "single_az" {
 variable "suffix" {
   type        = string
   description = "Suffix string to append to resources"
-  default     = "storage-services"
+  default     = "single-az"
+}
+
+variable "vpc_cidr" {
+  type        = string
+  description = "CIDR range for the VPC"
+  default     = "10.0.0.0/16"
 }

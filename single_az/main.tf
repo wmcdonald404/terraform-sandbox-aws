@@ -1,7 +1,7 @@
 resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
+  cidr_block = var.vpc_cidr
   tags       = {
-    Name     = "terraform-sandbox-${var.suffix}"
+    Name     = "${var.projectid}-${var.suffix}"
   }
 }
 
@@ -64,18 +64,18 @@ resource "aws_route" "bastion_gateway_route" {
 
 # Put an instance in the "primary" subnet
 resource "aws_instance" "public_bastions" {
-  ami                   = var.amis[var.ami]
+  ami                         = var.amis[var.ami]
   associate_public_ip_address = "true"
-  count                 = 1
-  instance_type         = var.base_instance_type
-  key_name              = "wmcdonald@gmail.com aws ed25519-key-20211205"
-  subnet_id             = aws_subnet.public_subnets[count.index].id
-  iam_instance_profile  = "AmazonSSMRoleForInstancesQuickSetup"
+  count                       = 1
+  instance_type               = var.base_instance_type
+  key_name                    = var.keypair
+  subnet_id                   = aws_subnet.public_subnets[count.index].id
+  iam_instance_profile        = "AmazonSSMRoleForInstancesQuickSetup"
   root_block_device {
-    volume_size = 8
+    volume_size               = 8
   }
-  user_data = var.ami == "debian12" ? var.debian_user_data : ""
-  vpc_security_group_ids = [aws_security_group.ssh_sg.id]
+  user_data                   = var.ami == "debian12" ? var.debian_user_data : ""
+  vpc_security_group_ids      = [aws_security_group.ssh_sg.id]
   tags = {
     Name         = "bastion-${count.index}"
     InstanceName = "bastion-${count.index}"
@@ -83,7 +83,7 @@ resource "aws_instance" "public_bastions" {
   }
 }
 
-##  user volume
+#  user volume
 resource "aws_ebs_volume" "public_bastions_user_volumes" {
   count             = length(aws_instance.public_bastions)
   availability_zone = var.multi_azs[count.index]

@@ -70,8 +70,13 @@ resource "aws_instance" "public_bastions" {
   iam_instance_profile        = "AmazonSSMRoleForInstancesQuickSetup"
   instance_type               = var.base_instance_type
   key_name                    = var.keypair
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_put_response_hop_limit = 1
+    http_tokens                 = "required"
+  }
   root_block_device {
-    volume_size               = 8
+    volume_size               = var.root_ebs_volume_size
   }
   subnet_id                   = aws_subnet.public_subnets[count.index].id
   tags = {

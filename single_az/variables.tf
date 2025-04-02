@@ -79,6 +79,12 @@ variable "region" {
   default     = "eu-west-1"
 }
 
+variable "root_ebs_volume_size" {
+  type        = number
+  description = "Default Root Volume Size (GB)"
+  default     = 8
+}
+
 variable "single_az" {
   type        = string
   description = "Primary AWS Availability Zone"
